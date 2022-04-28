@@ -28,7 +28,7 @@ for cluster in $(cat faillist); do
         echo Offline $cluster
         continue
     fi
-    if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver)' | grep -q Crash; then
+    if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
         echo BadOVN $cluster
         continue
     fi
@@ -40,15 +40,15 @@ for cluster in $(cat faillist); do
         echo BadOVN $cluster
         continue
     fi
-    if oc get co monitoring -ojson  | jq '.status.conditions[] | select(.type == "Degraded").message' -r | grep 'Grafna Deployment failed' -q; then
+    if oc get co monitoring -ojson  | jq '.status.conditions[]? | select(.type == "Degraded").message' -r | grep 'Grafna Deployment failed' -q; then
         echo BadOVN $cluster
         continue
     fi
-	if oc get co machine-config  -ojson | jq '.status.conditions[] | select(.type=="Degraded").message' | grep -q "waitForControllerConfigToBeCompleted"; then
+	if oc get co machine-config  -ojson | jq '.status.conditions[]? | select(.type=="Degraded").message' | grep -q "waitForControllerConfigToBeCompleted"; then
         echo WeirdMCO $cluster
         continue
     fi
-	if oc get co machine-config  -ojson | jq '.status.conditions[] | select(.type=="Degraded").message' | grep -q "waitForDeploymentRollout"; then
+	if oc get co machine-config  -ojson | jq '.status.conditions[]? | select(.type=="Degraded").message' | grep -q "waitForDeploymentRollout"; then
         echo WeirdMCO2 $cluster
         continue
     fi
