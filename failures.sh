@@ -11,7 +11,7 @@ mkdir /root/omer/manifests -p
 cd /root/omer
 
 # Dump kubeconfigs
-ls /root/omer/manifests/ | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/omer/manifests/%/kubeconfig"
+cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/omer/manifests/%/kubeconfig"
 
 # List failures
 oc get aci -A -ojson | jq '.items[] | select((.status.conditions[] | select(.type == "Failed")).status == "True") | .metadata.name' -r > faillist
