@@ -47,7 +47,7 @@ for cluster in $(cat faillist); do
         continue
     fi
     if oc get pods -n openshift-authentication 2>/dev/null | grep -q ContainerCreating; then
-        echo AuthContainerCreating $cluster
+        echo AuthContainerCreating-BZ2016115 $cluster
         continue
     fi
     if oc get co monitoring -ojson  | jq '.status.conditions[]? | select(.type == "Degraded").message' -r | grep 'Grafna Deployment failed' -q; then
