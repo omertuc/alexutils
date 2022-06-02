@@ -71,7 +71,7 @@ for cluster in $(cat faillist); do
         continue
     fi
     if [[ $(oc get pods -A -ojson | jq '[.items[] | select(.status.phase == "Pending").metadata.name] | length') > 10 ]]; then
-        echo LotsOfPending $cluster
+        echo LotsOfPending-bz2093013 $cluster
         continue
     fi
     if [[ $(oc get co -ojson | jq -r '[.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name] | length') == "0" ]]; then
