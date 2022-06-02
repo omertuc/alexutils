@@ -28,11 +28,11 @@ for cluster in $(cat faillist); do
         continue
     fi
     if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
-        echo BadOVN $cluster
+        echo BadOVN-Bz2092907 $cluster
         continue
     fi
 	if oc get pods -A | grep openshift-authentication | grep -q Crash; then
-        echo BadOVN $cluster
+        echo BadOVN-Bz2092907 $cluster
         continue
     fi
     if oc get pods -n openshift-authentication 2>/dev/null | grep -q ContainerCreating; then
