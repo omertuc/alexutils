@@ -11,11 +11,14 @@ mkdir /root/omer/manifests -p
 cd /root/omer
 
 # Dump kubeconfigs
+export KUBECONFIG=/root/bm/kubeconfig
 cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/omer/manifests/%/kubeconfig"
 
 # List failures
+export KUBECONFIG=/root/bm/kubeconfig
 oc get aci -A -ojson | jq '.items[] | select((.status.conditions[] | select(.type == "Failed")).status == "True") | .metadata.name' -r > faillist
 
+export KUBECONFIG=/root/bm/kubeconfig
 for cluster in $(cat faillist); do
 	export KUBECONFIG=manifests/$cluster/kubeconfig
     if ! oc get pods 2>/dev/null >/dev/null; then
@@ -25,6 +28,14 @@ for cluster in $(cat faillist); do
         fi
 
         echo Offline $cluster
+        continue
+    fi
+    if oc get pods -n openshift-apiserver -oyaml | grep -q ContainerStatusUnknown; then
+        echo ContainerStatusUnknown $cluster
+        continue
+    fi
+    if oc get pods -n openshift-oauth-apiserver -oyaml | grep -q ContainerStatusUnknown; then
+        echo ContainerStatusUnknown $cluster
         continue
     fi
     if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
