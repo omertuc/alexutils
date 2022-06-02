@@ -31,11 +31,11 @@ for cluster in $(cat faillist); do
         continue
     fi
     if oc get pods -n openshift-apiserver -oyaml | grep -q ContainerStatusUnknown; then
-        echo ContainerStatusUnknown $cluster
+        echo ContainerStatusUnknown-bz2092940 $cluster
         continue
     fi
     if oc get pods -n openshift-oauth-apiserver -oyaml | grep -q ContainerStatusUnknown; then
-        echo ContainerStatusUnknown $cluster
+        echo ContainerStatusUnknown-bz2092940 $cluster
         continue
     fi
     if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
