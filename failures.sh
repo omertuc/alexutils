@@ -10,13 +10,13 @@ mkdir /root/omer/manifests -p
 
 cd /root/omer
 
-# Dump kubeconfigs
-export KUBECONFIG=/root/bm/kubeconfig
-cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/omer/manifests/%/kubeconfig"
-
 # List failures
 export KUBECONFIG=/root/bm/kubeconfig
 oc get aci -A -ojson | jq '.items[] | select((.status.conditions[] | select(.type == "Failed")).status == "True") | .metadata.name' -r > faillist
+
+# Dump kubeconfigs
+export KUBECONFIG=/root/bm/kubeconfig
+cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/omer/manifests/%/kubeconfig"
 
 export KUBECONFIG=/root/bm/kubeconfig
 for cluster in $(cat faillist); do
