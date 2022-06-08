@@ -22,8 +22,13 @@ export KUBECONFIG=/root/bm/kubeconfig
 for cluster in $(cat faillist); do
 	export KUBECONFIG=manifests/$cluster/kubeconfig
     if ! oc get pods 2>/dev/null >/dev/null; then
-        if ssh core@$cluster sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
+        if ssh core@${cluster} sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
             echo CaBundleCrt-Bz2017860 $cluster
+            continue
+        fi
+
+        if ssh core@${cluster} sudo journalctl -u kubelet 2>&1 | grep "unable to destroy cgroup paths"  -q; then
+            echo SystemdTimeout-Bz2094952 $cluster
             continue
         fi
 
