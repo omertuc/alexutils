@@ -10,6 +10,10 @@ mkdir /root/omer/manifests -p
 
 cd /root/omer
 
+for n in $(seq -f "%05g" 1 3000); do
+    mkdir /root/omer/manifests/sno${n} -p
+done
+
 # List failures
 export KUBECONFIG=/root/bm/kubeconfig
 oc get aci -A -ojson | jq '.items[] | select((.status.conditions[] | select(.type == "Failed")).status == "True") | .metadata.name' -r > faillist
