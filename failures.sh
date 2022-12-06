@@ -96,8 +96,11 @@ for cluster in $(cat faillist); do
 done
 
 # Event scanning example
+cd /root/omer
+export KUBECONFIG=/root/bm/kubeconfig
 cat faillist | while read -r x; do
-    curl -s -k $(oc get aci -n $x $x -ojson | jq '.status.debugInfo.eventsURL' -r) | jq '
+    echo $x
+    curl -s -k $(oc get aci -n $x $x -ojson | jq '.status.debugInfo.eventsURL' -r) | jq -r '
         .[] 
         | select(
             (.message | test("connected"))
