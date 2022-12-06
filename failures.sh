@@ -36,7 +36,12 @@ for cluster in $(cat faillist); do
             continue
         fi
 
-        echo Offline $cluster
+        if ssh core@${cluster} ls; then
+            echo APIDown $cluster
+        else
+            echo Offline $cluster
+        fi
+
         continue
     fi
     if oc get pods -n openshift-apiserver -oyaml | grep -q ContainerStatusUnknown; then
@@ -88,4 +93,15 @@ for cluster in $(cat faillist); do
         continue
     fi
     echo Else $cluster
+done
+
+# Event scanning example
+cat faillist | while read -r x; do
+    curl -s -k $(oc get aci -n $x $x -ojson | jq '.status.debugInfo.eventsURL' -r) | jq '
+        .[] 
+        | select(
+            (.message | test("connected"))
+            and
+            (.message | test("is now failing"))
+        ).event_time'
 done
