@@ -25,7 +25,9 @@ cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -
 export KUBECONFIG=/root/bm/kubeconfig
 for cluster in $(cat faillist); do
     export KUBECONFIG=manifests/$cluster/kubeconfig
-    if oc get co -ojson 2>/dev/null | jq '
+    if oc get clusterversion -ojson | jq --exit-status '.items[].status.conditions[] | select(.type == "Available").status == "True"' > /dev/null; then
+         echo Healthy "$cluster"
+    elif oc get co -ojson 2>/dev/null | jq --exit-status '
             [
                 .items[] 
                 | select(
@@ -36,14 +38,29 @@ for cluster in $(cat faillist); do
             | (($x | length) == 1 and $x[0].metadata.name == "etcd")
         '>/dev/null 2>/dev/null; then
          echo EtcdLeaseStuck "$cluster"
+    elif oc get co -ojson 2>/dev/null | jq --exit-status '
+            [
+                .items[] 
+                | select(
+                    .status.conditions[] 
+                    | select(.type == "Degraded").status == "True"
+                )
+            ] as $x 
+            | (($x | length) == 1 and $x[0].metadata.name == "machine-config")
+        '>/dev/null 2>/dev/null; then
+         echo MachineConfigIssue "$cluster"
     elif oc get pods -A -ojson | jq ' .items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "ContainerCreating").metadata | {name, namespace}' -c | while read -r x; do oc get events -n "$(echo "$x" | jq '.namespace' -r)" -ojson | jq --arg name "$(echo "$x" | jq '.name' -r)" ' .items[] | select(.involvedObject.name == $name).reason'; done | jq --exit-status --slurp '[.[] | select(. == "FailedMount")] | length > 10' >/dev/null; then
          echo VolumeMountIssue "$cluster"
     elif oc get pods -n openshift-kube-controller-manager kube-controller-manager-"$cluster" 2>/dev/null | grep Completed -q; then
         echo NoKubeControllerManagedStaticPod "$cluster"
     elif oc get pods -n openshift-kube-scheduler openshift-kube-scheduler-"$cluster" 2>/dev/null | grep Completed -q; then
         echo NoSchedulerStaticPod "$cluster"
-    elif oc get pods -n openshift-kube-controller-manager kube-controller-manager-vm02122 -ojson 2>/dev/null | jq '.status.containerStatuses[] | select(.name == "kube-controller-manager").ready | not' --exit-status >/dev/null; then
+    elif oc get co etcd -ojson | jq --exit-status ' .status.conditions[] | select(.type == "Degraded").reason == "MissingStaticPodController_SyncError"' > /dev/null; then
+        echo NoEtcdStaticPod "$cluster"
+    elif oc get pods -n openshift-kube-controller-manager kube-controller-manager-"$cluster" -ojson 2>/dev/null | jq '.status.containerStatuses[] | select(.name == "kube-controller-manager").ready | not' --exit-status >/dev/null; then
         echo UnreadyKubeControllerManager "$cluster"
+    elif oc get pods -n openshift-etcd etcd-"$cluster" -ojson 2>/dev/null | jq '.status.containerStatuses[] | select(.name == "etcd").ready | not' --exit-status >/dev/null; then
+        echo UnreadyEtcd "$cluster"
     elif oc logs -n openshift-machine-api deployment/cluster-baremetal-operator -c cluster-baremetal-operator 2>/dev/null | grep "unable to start manager" -q; then
         echo ClusterBaremetalOperatorManagerStartFailed "$cluster"
     else
