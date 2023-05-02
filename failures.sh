@@ -25,7 +25,7 @@ cat faillist | xargs -I % sh -c "echo %; oc get secret %-admin-kubeconfig -n % -
 export KUBECONFIG=/root/bm/kubeconfig
 for cluster in $(cat faillist); do
     export KUBECONFIG=manifests/$cluster/kubeconfig
-    if oc get clusterversion -ojson | jq --exit-status '.items[].status.conditions[] | select(.type == "Available").status == "True"' > /dev/null; then
+    if oc get clusterversion -ojson 2>/dev/null | jq --exit-status '.items[].status.conditions[] | select(.type == "Available").status == "True"' > /dev/null; then
          echo Healthy "$cluster"
     elif oc get co -ojson 2>/dev/null | jq --exit-status '
             [
@@ -63,6 +63,10 @@ for cluster in $(cat faillist); do
         echo UnreadyEtcd "$cluster"
     elif oc logs -n openshift-machine-api deployment/cluster-baremetal-operator -c cluster-baremetal-operator 2>/dev/null | grep "unable to start manager" -q; then
         echo ClusterBaremetalOperatorManagerStartFailed "$cluster"
+    elif [[ $(oc get pods -n openshift-kube-controller-manager kube-controller-manager-"$cluster" -ojson 2>/dev/null | jq '.metadata.labels.revision' -r) != $(oc get pods -n openshift-kube-controller-manager -ojson | jq '[.items[] | select(.metadata.name | test("^installer-.*")).metadata.name] | sort[-1]' -r | cut -d"-" -f2) ]]; then
+        echo BadKubeControllerManagerRevision "$cluster"
+    elif [[ $(oc get pods -n openshift-kube-scheduler openshift-kube-scheduler-"$cluster" -ojson 2>/dev/null | jq '.metadata.labels.revision' -r) != $(oc get pods -n openshift-kube-scheduler -ojson | jq '[.items[] | select(.metadata.name | test("^installer-.*")).metadata.name] | sort[-1]' -r | cut -d"-" -f2) ]]; then
+        echo BadSchedulerRevision "$cluster"
     else
         echo Other "$cluster"
     fi
