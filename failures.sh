@@ -36,6 +36,8 @@ for cluster in $(cat faillist); do
             | (($x | length) == 1 and $x[0].metadata.name == "etcd")
         '>/dev/null 2>/dev/null; then
          echo EtcdLeaseStuck "$cluster"
+    elif oc get pods -A -ojson | jq ' .items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "ContainerCreating").metadata | {name, namespace}' -c | while read -r x; do oc get events -n "$(echo "$x" | jq '.namespace' -r)" -ojson | jq --arg name "$(echo "$x" | jq '.name' -r)" ' .items[] | select(.involvedObject.name == $name).reason'; done | jq --exit-status --slurp '[.[] | select(. == "FailedMount")] | length > 10' >/dev/null; then
+         echo VolumeMountIssue "$cluster"
     else
         echo Other "$cluster"
     fi
