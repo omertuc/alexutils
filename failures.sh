@@ -38,6 +38,14 @@ for cluster in $(cat faillist); do
          echo EtcdLeaseStuck "$cluster"
     elif oc get pods -A -ojson | jq ' .items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "ContainerCreating").metadata | {name, namespace}' -c | while read -r x; do oc get events -n "$(echo "$x" | jq '.namespace' -r)" -ojson | jq --arg name "$(echo "$x" | jq '.name' -r)" ' .items[] | select(.involvedObject.name == $name).reason'; done | jq --exit-status --slurp '[.[] | select(. == "FailedMount")] | length > 10' >/dev/null; then
          echo VolumeMountIssue "$cluster"
+    elif oc get pods -n openshift-kube-controller-manager kube-controller-manager-"$cluster" 2>/dev/null | grep Completed -q; then
+        echo NoKubeControllerManagedStaticPod "$cluster"
+    elif oc get pods -n openshift-kube-scheduler openshift-kube-scheduler-"$cluster" 2>/dev/null | grep Completed -q; then
+        echo NoSchedulerStaticPod "$cluster"
+    elif oc get pods -n openshift-kube-controller-manager kube-controller-manager-vm02122 -ojson 2>/dev/null | jq '.status.containerStatuses[] | select(.name == "kube-controller-manager").ready | not' --exit-status >/dev/null; then
+        echo UnreadyKubeControllerManager "$cluster"
+    elif oc logs -n openshift-machine-api deployment/cluster-baremetal-operator -c cluster-baremetal-operator 2>/dev/null | grep "unable to start manager" -q; then
+        echo ClusterBaremetalOperatorManagerStartFailed "$cluster"
     else
         echo Other "$cluster"
     fi
