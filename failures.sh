@@ -10,7 +10,7 @@ mkdir /root/omer/manifests -p
 
 cd /root/omer
 
-for n in $(seq -f "%05g" 1 3500); do
+for n in $(seq -f "%05g" 1 3700); do
 	mkdir /root/omer/manifests/vm${n} -p
 done
 
